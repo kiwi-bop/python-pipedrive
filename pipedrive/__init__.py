@@ -1,4 +1,3 @@
-from httplib2 import Http
 from logging import getLogger
 
 try:
@@ -7,6 +6,9 @@ except ImportError:
     from urllib.parse import urlencode
 
 import json
+
+import requests
+
 
 PIPEDRIVE_API_URL = "https://api.pipedrive.com/v1/"
 logger = getLogger('pipedrive')
@@ -32,10 +34,11 @@ class Pipedrive(object):
             uri = PIPEDRIVE_API_URL + endpoint + '?api_token=' + str(self.api_token)
             if data:
                 uri += '&' + urlencode(data)
-            response, data = self.http.request(uri, method=method, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            response = requests.get(uri, headers={'Content-Type': 'application/x-www-form-urlencoded'})
         else:
             uri = PIPEDRIVE_API_URL + endpoint + '?api_token=' + str(self.api_token)
-            response, data = self.http.request(uri, method=method, body=urlencode(data), headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            actual_method = getattr(requests, method.lower())
+            response = actual_method(uri, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
         logger.debug('sending {method} request to {uri}'.format(
             method=method,
@@ -45,10 +48,9 @@ class Pipedrive(object):
 
         # if python2, use:
         # return json.loads(data)
-        return json.loads(data.decode('utf-8'))
+        return json.loads(response.content.decode())
 
     def __init__(self, email, password=None):
-        self.http = Http()
         if password:
             response = self._request("/authorizations/", {"email": email, "password": password})
 
