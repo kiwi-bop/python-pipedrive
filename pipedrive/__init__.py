@@ -37,10 +37,6 @@ class Pipedrive(object):
             method=method,
             uri=response.url
         ))
-        # print(json.dumps(json.loads(data.decode('utf-8')), sort_keys=True, indent=4))
-
-        # if python2, use:
-        # return json.loads(data)
         return response.json()
 
     def __init__(self, email, password=None):
