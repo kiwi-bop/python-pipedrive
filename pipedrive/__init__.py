@@ -1,12 +1,5 @@
 from logging import getLogger
 
-try:
-    from urllib import urlencode
-except ImportError:
-    from urllib.parse import urlencode
-
-import json
-
 import requests
 
 
@@ -28,29 +21,30 @@ class IncorrectLoginError(PipedriveError):
 
 class Pipedrive(object):
     def _request(self, endpoint, data, method='POST'):
+        uri = PIPEDRIVE_API_URL + endpoint
+        payload = {'api_token': self.api_token}
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         # avoid storing the string 'None' when a value is None
         data = {k: "" if v is None else v for k, v in data.items()}
         if method == "GET":
-            uri = PIPEDRIVE_API_URL + endpoint + '?api_token=' + str(self.api_token)
             if data:
-                uri += '&' + urlencode(data)
-            response = requests.get(uri, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                payload.update(data)
+            response = self.http.request(method, uri, params=payload, headers=headers)
         else:
-            uri = PIPEDRIVE_API_URL + endpoint + '?api_token=' + str(self.api_token)
-            actual_method = getattr(requests, method.lower())
-            response = actual_method(uri, data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            response = self.http.request(method, uri, data=data, params=payload, headers=headers)
 
         logger.debug('sending {method} request to {uri}'.format(
             method=method,
-            uri=uri
+            uri=response.url
         ))
         # print(json.dumps(json.loads(data.decode('utf-8')), sort_keys=True, indent=4))
 
         # if python2, use:
         # return json.loads(data)
-        return json.loads(response.content.decode())
+        return response.json()
 
     def __init__(self, email, password=None):
+        self.http = requests.Session()
         if password:
             response = self._request("/authorizations/", {"email": email, "password": password})
 
